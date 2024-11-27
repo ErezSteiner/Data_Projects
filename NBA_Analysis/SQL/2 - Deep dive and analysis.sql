@@ -50,7 +50,7 @@ Joins the players table with the points scored view, and groups by the player in
 
 Second CTE(rnktbl):
 Uses DENSE_RANK to order the results to allow for future filtering, DENSE is the way to go here because of potential ties.
-The CTE also calculates two point differentials, one between each player and one between every player and the top scorer in the particular table.
+The CTE also calculates two point differentials, one between each player and one between every subsequent player and the top scorer in the particular table.
 The point differential between each player is nested inside an ISNULL in order to deal with the null result of comparing top scorer to no one.
 
 Final Selection:
