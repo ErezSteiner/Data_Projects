@@ -30,11 +30,121 @@ SELECT
         pnt_diff_topscr
 FROM rnktbl AS r
 WHERE pnts_rank < 11;
+/*
+Player_ID   Player_Name             total_points        pnt_diff_rows       pnt_diff_topscr
+1629029	    Luka Doncic	                1892	        0	            0
+1628973	    Jalen Brunson	        1791	        -101	            -101
+203999	    Nikola Jokic	        1727	        -64	            -165
+203507	    Giannis Antetokounmpo	1708	        -19	            -184
+1628983	    Shai Gilgeous-Alexander	1687	        -21	            -205
+201142	    Kevin Durant	        1670	        -17	            -222
+201939	    Stephen Curry	        1657	        -13	            -235
+1628368	    DeAaron Fox	                1654	        -3	            -238
+1630162	    Anthony Edwards	        1626	        -28	            -266
+1628369	    Jayson Tatum	        1573	        -53	            -319
+*/
+/*
 
---CTE's were made to avoid having to use calculations in the filtering sections, and for ease of reading. also to improve performance since we got 200k rows
---the dense rank is needed in order to deal with potential ties.
---LAG is used to calculate the point differential between rows, nested inside an ISNULL to deal with the first row being null
---FIRST_VALUE is used to get the scoring leaders point total and calculate the differential from that. ISNULL not needed here as the value will just be 0 for the top scorer
+First CTE (pnts_by_player):
+Joins the players table with the points scored view, and groups by the player information and SUMs the total amount of points per player.
 
+Second CTE(rnktbl):
+Uses DENSE_RANK to order the results to allow for future filtering, DENSE is the way to go here because of potential ties.
+The CTE also calculates two point differentials, one between each player and one between every player and the top scorer in the particular table.
+The point differential between each player is nested inside an ISNULL in order to deal with the null result of comparing top scorer to no one.
 
+Final Selection:
+Selects the relevant data and filter it to the top 10 scorers.
 
+*/
+
+/*
+Checking the success rate per shot type,
+but only for shot_ids that were attempted by players with at least 100 points scored in that shot type
+This is done in order to avoid players with few attempts skewing the results and to also filter out heaves(when a player attempts a low quality shot when shot clock is about to run out)
+and other low volume shot types like "hook bank shot" that have very few attempts in the season
+*/
+
+WITH
+shots_with_score
+AS
+(SELECT
+        s.Shot_ID,
+        s.Player_ID,
+        s.Action_Type,
+        s.Shot_Made,
+        pnts.points_scored,
+        SUM(pnts.points_scored) OVER(PARTITION BY s.Player_ID, s.Action_Type) as tot_player_scr
+FROM Shots AS s
+    INNER JOIN vw_points_scored AS pnts
+        ON s.Shot_ID = pnts.Shot_ID)
+,
+fltrtbl
+AS
+(
+SELECT
+        Shot_ID,
+        Action_Type,
+        Shot_Made,
+        points_scored
+FROM shots_with_score as sws
+WHERE tot_player_scr >= 100
+)
+,
+totaltbl
+AS
+(SELECT 
+        Shot_ID,
+        Action_Type,
+        COUNT(Shot_ID) OVER(PARTITION BY Action_Type) AS total_attempted,
+        SUM(CAST(Shot_Made AS float)) OVER(PARTITION BY Action_Type) AS total_made
+FROM fltrtbl AS f)
+SELECT
+        Action_Type,
+        CONCAT(FORMAT(SUM(total_made) / SUM(total_attempted) * 100, '#.##'), '%') as success_rate
+FROM totaltbl AS t
+GROUP BY Action_Type;
+
+/*
+Action_Type                             success_rate
+Alley Oop Dunk Shot	                91.71%
+Cutting Dunk Shot	                87.7%
+Cutting Layup Shot	                75.24%
+Driving Dunk Shot	                92.21%
+Driving Finger Roll Layup Shot	        67.15%
+Driving Floating Jump Shot	        49.71%
+Driving Layup Shot	                52.49%
+Fadeaway Jump Shot	                47.37%
+Floating Jump shot	                63.03%
+Hook Shot	                        61.45%
+Jump Shot	                        38.62%
+Layup Shot	                        62.5%
+Pullup Jump shot	                41.12%
+Running Jump Shot	                45.24%
+Running Layup Shot	                63.01%
+Step Back Jump shot	                40.63%
+Turnaround Hook Shot	                57.47%
+Turnaround Jump Shot	                47.75%
+*/
+
+/*
+First CTE (shots_with_score):
+Joins the Shots table with the vw_points_scored view.
+Sums the points scored by player and action type using a window function.
+This allows the next CTE to filter out low volume shot types and players.
+
+Second CTE (fltrtbl):
+Filters the results to include only those with a total player score (tot_player_scr) of 100 or more.
+This ensures that only significant shot types and players are considered.
+
+Third CTE (totaltbl):
+Calculates the total attempted shots and made shots per shot type.
+Shot_Made is stored bitwise, so it needs to be cast to float before summing to allow it to be summed
+and to also provide for proper division in the subsequent CTE.
+
+Final Selection:
+Group the rows by Action_Type to calculate the success rate per action type.
+This approach is more efficient than using DISTINCT,
+as it avoids unnecessary sorting and deduplication.
+Uses CONCAT and FORMAT to display the results neatly.
+*/
