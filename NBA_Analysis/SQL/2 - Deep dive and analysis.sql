@@ -62,7 +62,7 @@ Selects the relevant data and filter it to the top 10 scorers.
 Checking the success rate per shot type,
 but only for shot_ids that were attempted by players with at least 100 points scored in that shot type
 This is done in order to avoid players with few attempts skewing the results and to also filter out heaves(when a player attempts a low quality shot when shot clock is about to run out)
-and other low volume shot types like "hook bank shot" that have very few attempts
+and other low volume shot types like "hook bank shot" that have very few attempts.
 */
 
 WITH
