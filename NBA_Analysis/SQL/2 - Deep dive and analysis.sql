@@ -32,14 +32,14 @@ FROM rnktbl AS r
 WHERE pnts_rank < 11;
 /*
 Player_ID   Player_Name             total_points    pnt_diff_rows   pnt_diff_topscr
-1629029	    Luka Doncic	            1892	        0	            0
-1628973	    Jalen Brunson	        1791	        -101	        -101
+1629029	    Luka Doncic	                1892	        0	            0
+1628973	    Jalen Brunson	        1791	        -101	            -101
 203999	    Nikola Jokic	        1727	        -64	            -165
 203507	    Giannis Antetokounmpo	1708	        -19	            -184
 1628983	    Shai Gilgeous-Alexander	1687	        -21	            -205
 201142	    Kevin Durant	        1670	        -17	            -222
 201939	    Stephen Curry	        1657	        -13	            -235
-1628368	    DeAaron Fox	            1654	        -3	            -238
+1628368	    DeAaron Fox	                1654	        -3	            -238
 1630162	    Anthony Edwards	        1626	        -28	            -266
 1628369	    Jayson Tatum	        1573	        -53	            -319
 */
