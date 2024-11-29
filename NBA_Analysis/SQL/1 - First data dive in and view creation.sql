@@ -66,7 +66,7 @@ FROM vw_points_scored as pnts
 GROUP BY pnts.Player_ID;
 GO
 
---I'll also create a view for the amount of games each player played*, in order to avoid future uses of the costly DISTINCT
+--I'll also create a view for the amount of games each player played*
 --*this isn't really the amount of game each player played, due to how the data is set up this is actually the amount of games a player attempted a shot in. games in which the player played but didn't attempt to score(extremely rare but happens) are not in the original data
 --Note that it's actually possible for a player to play more than the maximum 82 games in a season
 --if he gets traded to a team that is "further back" in their schedule
