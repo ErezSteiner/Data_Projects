@@ -1,7 +1,7 @@
 --The table information can be easily viewed in the file "DB_CREATE_NO_INSERTS.sql"
---But the tables and the cols are named in a self evident manner.
+--But the tables and the cols are named in a self evident manner
 
---This script will mostly be about view creation for future use, and some basic intial exploration.
+--This script will mostly be about view creation for future use, and some basic intial exploration
 
 SELECT
         COUNT(p.Player_ID) AS tot_players
@@ -61,7 +61,7 @@ CREATE VIEW vw_points_per_game
 AS
 SELECT
         pnts.Player_ID,
-        FORMAT(CAST(SUM(pnts.points_scored) AS FLOAT) / COUNT(DISTINCT pnts.Game_ID), '0.00') AS pts_per_game
+        CAST(SUM(pnts.points_scored) AS FLOAT) / COUNT(DISTINCT pnts.Game_ID) AS pts_per_game
 FROM vw_points_scored as pnts
 GROUP BY pnts.Player_ID;
 GO
