@@ -167,3 +167,74 @@ Final Selection:
 Uses CONCAT and FORMAT to display the results neatly,
 and then ordering the results based on the numerical value in the previous CTE.
 */
+
+
+/*
+Christmas game analysis
+The NBA Christmas day games are unique in such that they are not part of the "normal" scheduling and only popular teams get to play
+in one of the 5 games that occur on that day
+The games are all nationally televised(unlike normal games which might not be) and usually have the highest ratings for the season
+What I want to see is how the players performed in those games as opposed to their seasonal average
+*/
+
+WITH
+christmastbl
+AS
+(SELECT
+        pnts.Player_ID,
+        SUM(points_scored) AS total_pnts
+FROM vw_points_scored as pnts
+        INNER JOIN Games AS g
+                ON pnts.Game_ID = g.Game_ID
+WHERE g.Game_Date = '2023-12-25'
+GROUP BY pnts.Player_ID)
+,
+difftbl
+AS
+(SELECT
+        x.Player_ID,
+        x.total_pnts AS pnts_in_christmas_game,
+        p.pts_per_game AS season_avg,
+        ((x.total_pnts / p.pts_per_game)-1) * 100 as percent_diff
+             
+FROM christmastbl as x
+        INNER JOIN vw_points_per_game as p
+        ON p.player_ID = x.Player_ID)
+
+SELECT
+        d.Player_ID,
+        p.Player_Name,
+        d.pnts_in_christmas_game,
+        FORMAT(d.season_avg, '0.##') AS season_avg,
+        FORMAT(d.percent_diff, '0.##') + '%' AS change_percent
+FROM difftbl AS d
+        INNER JOIN Players AS p
+                ON d.Player_ID = p.player_ID
+ORDER BY d.percent_diff DESC;
+
+
+/*
+Player_ID,      Player_Name,            pnts_in_christmas_game, season_avg,     change_percent
+1628964	        Mo Bamba	        17	                4.47	        280.37%
+1629002	        Chimezie Metu	        20	                6.09	        228.47%
+1627884	        Derrick Jones Jr.	21	                7.47	        181.25%
+1628960	        Grayson Allen	        32	                11.8	        171.19%
+1631170	        Jaime Jaquez Jr.	23	                9.96	        130.92%
+1627752	        Taurean Prince	        17	                8.29	        104.95%
+1641726	        Dereck Lively II	16	                8.04	        99.1%
+1626162	        Kelly Oubre Jr.	        24	                12.87	        86.51%
+...
+*/
+
+
+/*
+First CTE (christmastbl):
+This CTE sums all the points the players scored on Christmas day, by joining the points scored view to the games table and limiting the date to 25/12/2023.
+
+Second CTE(difftbl):
+This CTE joins the pts_per_game view and calculates the difference between the average score of the player and their score in the Christmas game.
+
+Final Selection:
+Joins the players table to get players name, and format the results.
+*/
+
