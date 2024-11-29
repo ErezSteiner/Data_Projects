@@ -1,7 +1,7 @@
 --The table information can be easily viewed in the file "DB_CREATE_NO_INSERTS.sql"
---But the tables and the cols are named in a self evident manner
+--But the tables and the cols are named in a self evident manner.
 
---First some basic exploration, just to see how much data I'm dealing with for the 2024 regular NBA season.
+--This script will mostly be about view creation for future use, and some basic intial exploration.
 
 SELECT
         COUNT(p.Player_ID) AS tot_players
@@ -55,4 +55,29 @@ FROM vw_points_scored;
 --a total of 239,057 of non penalty points were scored in the season.
 
 
+--Creating an average points per player view
+GO
+CREATE VIEW vw_points_per_game
+AS
+SELECT
+        pnts.Player_ID,
+        FORMAT(CAST(SUM(pnts.points_scored) AS FLOAT) / COUNT(DISTINCT pnts.Game_ID), '0.00') AS pts_per_game
+FROM vw_points_scored as pnts
+GROUP BY pnts.Player_ID;
+GO
+
+--I'll also create a view for the amount of games each player played*, in order to avoid future uses of the costly DISTINCT
+--*this isn't really the amount of game each player played, due to how the data is set up this is actually the amount of games a player attempted a shot in. games in which the player played but didn't attempt to score(extremely rare but happens) are not in the original data
+--Note that it's actually possible for a player to play more than the maximum 82 games in a season
+--if he gets traded to a team that is "further back" in their schedule
+GO
+CREATE VIEW vw_games_played
+AS
+SELECT
+        pnts.Player_ID,
+        COUNT(DISTINCT pnts.Game_ID) AS games_played
+
+FROM vw_points_scored AS pnts
+GROUP BY pnts.Player_ID
+GO
 
