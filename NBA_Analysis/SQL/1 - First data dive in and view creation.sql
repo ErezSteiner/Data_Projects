@@ -32,8 +32,10 @@ GROUP BY s.Shot_Made;
 
 GO
 CREATE VIEW vw_points_scored AS
-SELECT 
+SELECT
     s.Shot_ID,
+    s.Season_ID,
+    s.Team_ID,
     s.Player_ID,
     s.Game_ID,
         CASE
