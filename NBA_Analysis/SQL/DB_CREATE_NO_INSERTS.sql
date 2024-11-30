@@ -115,6 +115,10 @@ CREATE TABLE Shots
 (
 Shot_ID int IDENTITY(1,1),
 CONSTRAINT PK_Shot_ID PRIMARY KEY (Shot_ID),
+Season_ID smallint,
+CONSTRAINT FK_Shot_Season_ID FOREIGN KEY(Season_ID) REFERENCES Seasons(Season),
+Team_ID INT,
+CONSTRAINT FK_Shot_Team_ID FOREIGN KEY (Team_ID) REFERENCES Teams (Team_ID),
 Player_ID int,
 CONSTRAINT FK_Shot_Player_ID FOREIGN KEY (Player_ID) REFERENCES Players(Player_ID),
 Game_ID int,
