@@ -238,3 +238,80 @@ Final Selection:
 Joins the players table to get players name, and format the results.
 */
 
+
+--Team score analysis
+WITH
+teampoints
+AS
+
+(SELECT 
+        s.Team_ID,
+        s.Game_ID,
+        SUM(pnts.points_scored) AS game_score
+
+FROM Shots AS s
+        INNER JOIN vw_points_scored AS pnts
+                ON s.Shot_ID = pnts.Shot_ID
+GROUP BY s.Team_ID, s.Game_ID)
+,
+sumdifftbl
+AS
+(SELECT
+        t.Team_ID,
+        th.Team_Name,
+        t.Game_ID,
+        g.Game_Date,
+        ROW_NUMBER() OVER(PARTITION BY t.Team_ID ORDER BY g.Game_Date) AS team_game_number,
+        t.game_score,
+        SUM(t.game_score) OVER(PARTITION BY t.Team_ID ORDER BY g.Game_Date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS rolling_sum,
+        FORMAT((CAST(t.game_score AS float) / LAG(t.game_score, 1) OVER(PARTITION BY t.Team_ID ORDER BY g.Game_Date) - 1) * 100,'0.00') + '%' AS change_rate
+
+FROM teampoints AS t
+        INNER JOIN Games AS g
+                ON t.Game_ID = g .Game_ID
+        INNER JOIN Team_History AS th
+                ON th.Team_ID = t.Team_ID)
+
+SELECT
+        sd.Team_ID,
+        sd.Team_Name,
+        sd.Game_ID,
+        sd.Game_Date,
+        sd.team_game_number,
+        sd.game_score,
+        CASE WHEN team_game_number = 1
+                THEN 'First Game'
+                ELSE sd.change_rate
+                END as change_rate,
+        sd.rolling_sum AS rolling_points_sum
+FROM sumdifftbl AS sd
+
+
+/*
+Team_ID         Team_Name       Game_ID         Game_Date       team_game_number        game_score      change_rate     rolling_points_sum
+1610612737	Atlanta Hawks	22300063	2023-10-25	1	                83	        First Game	83
+1610612737	Atlanta Hawks	22300079	2023-10-27	2	                96	        15.66%	        179
+1610612737	Atlanta Hawks	22300097	2023-10-29	3	                109	        13.54%	        288
+1610612737	Atlanta Hawks	22300104	2023-10-30	4	                110	        0.92%	        398
+1610612737	Atlanta Hawks	22300117	2023-11-01	5	                101	        -8.18%	        499
+1610612737	Atlanta Hawks	22300135	2023-11-04	6	                104	        2.97%	        603
+1610612737	Atlanta Hawks	22300155	2023-11-06	7	                90	        -13.46%	        693
+1610612737	Atlanta Hawks	22300172	2023-11-09	8	                97	        7.78%	        790
+1610612737	Atlanta Hawks	22300175	2023-11-11	9	                94	        -3.09%	        884
+...
+*/
+
+/*
+First CTE (teampoints):
+This CTE joins the points scored view with the shots table and sums each teams score per game.
+
+Second CTE(sumdifftbl):
+This CTE joins the game table and the team history table to get the game date and team name respectively. I use ROW_NUMBER() to number each of the 82 games each team plays.
+I use SUM to create a rolling average, and LAG to do a percentage change between each row.
+
+Final Selection:
+To change the NULL to a more informative value, I use a case on the game number rather than the actual value in the percentage change.
+I did that in order to avoid having to use 0 as the condiction for the case, because it might catch situations
+in which the team scored the same amount in subsequent games
+*/
+
