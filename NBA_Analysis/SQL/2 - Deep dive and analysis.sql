@@ -315,3 +315,110 @@ I did that in order to avoid having to use 0 as the condiction for the case, bec
 in which the team scored the same amount in subsequent games
 */
 
+
+/*
+Back to Back Analysis
+A back to back in the NBA is when a team plays two games in subsequent days, which causes the team to not get any meaningful rest before the second game.
+What I am going to do is find and mark all B2B games, count to see how many each team plays in, and later use a view derived from the next query to check
+how the players perform in B2B games.
+*/
+
+GO
+
+WITH
+stbl
+AS
+(SELECT
+        s.Game_ID,
+        s.Team_ID
+from Shots AS s
+GROUP BY s.Game_ID, s.Team_ID)
+,
+wtbl
+AS
+(SELECT
+        s.Game_ID,
+        g.Game_Date,
+        LAG(g.Game_Date, 1) OVER(PARTITION BY s.team_id ORDER BY g.Game_Date) AS prevGameDate,
+        s.Team_ID,
+        t.Team_Name,
+        ROW_NUMBER() OVER(PARTITION BY s.Team_ID ORDER BY g.Game_Date) AS team_game_number
+FROM stbl AS s
+        INNER JOIN Team_History AS t
+                ON s.Team_ID = t.Team_ID
+        INNER JOIN Games AS g
+                ON s.Game_ID = g.Game_ID)
+,
+daystbl
+AS
+(SELECT
+        w.Game_ID,
+        w.Game_Date,
+        w.prevGameDate,
+        DATEDIFF(DAY,w.prevGameDate,  w.Game_Date) AS DaysSinceLastGame,
+        w.Team_ID,
+        w.Team_Name,
+        w.team_game_number
+FROM wtbl AS w)
+,
+b2btbl
+AS
+(SELECT
+        d.Game_ID,
+        d.Game_Date,
+        d.DaysSinceLastGame,
+        CASE
+                WHEN DaysSinceLastGame = 1
+                        THEN 1 --true
+                        ELSE 0 --false
+                END AS b2bcheck,
+        d.Team_ID,
+        d.Team_Name,
+        d.team_game_number
+FROM daystbl AS d)
+SELECT
+        b.Game_ID,
+        b.Game_Date,
+        b.b2bcheck,
+        b.Team_ID,
+        b.Team_Name,
+        b.team_game_number,
+        SUM(b2bcheck) OVER(PARTITION BY b.team_id) AS b2bGameCountPerTeam,
+        SUM(b2bcheck) OVER() AS b2bGamesForLeague
+
+FROM b2btbl AS b
+WHERE b2bcheck = 1;
+/*
+Game_ID	        Game_Date	b2bcheck	Team_ID	        Team_Name	   team_game_number	b2bGameCountPerTeam	b2bGamesForLeague
+2230010         2023-10-30	1	        1610612737	Atlanta Hawks	    4	                15	                422
+22300193	2023-11-15	1	        1610612737      Atlanta Hawks	    11	                15	                422
+22300227	2023-11-22	1	        1610612737      Atlanta Hawks	    14	                15	                422
+22300246	2023-11-26	1	        1610612737      Atlanta Hawks	    16	                15	                422
+...
+*/
+/*
+First CTE (stbl):
+Grouped the shot tables game_ID and Team_ID, to get a list of all the games each team played.
+
+Second CTE (wtbl):
+Joined the Team_History table to get the team name, and the Game table to get the game date.
+I then used LAG to get the previous game date for future calculations and used ROW_NUMBER to number the games in order from 1 to 82.
+
+Third CTE(daystbl):
+In this CTE I used DATEDIFF() to calculate the days between games.
+
+Fourth CTE(b2btbl):
+In this CTE I used a case to check and mark games that are the second part of a B2B, the games that teams don't get to rest for.
+
+Final Selection:
+I used SUM to count the total amount of B2B per team and for the entire league.
+Some of the previous CTE's could have been condensed but I  believe it would have been difficult to read them in that case.
+*/
+
+/*
+Now I'll check player performance in B2B games.
+The view 'vw_b2b_games' is created in this script: '1 - First data dive in and view creation.sql'.
+It's the previous query up to the fourth CTE(b2btbl)
+/*
+
+--TBD
