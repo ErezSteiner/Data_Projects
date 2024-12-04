@@ -83,3 +83,62 @@ FROM vw_points_scored AS pnts
 GROUP BY pnts.Player_ID
 GO
 
+
+
+        
+--Marking all back to back games
+GO
+CREATE VIEW vw_b2b_games
+AS
+WITH
+stbl
+AS
+(SELECT
+        s.Game_ID,
+        s.Team_ID
+from Shots AS s
+GROUP BY s.Game_ID, s.Team_ID)
+,
+wtbl
+AS
+(SELECT
+        s.Game_ID,
+        g.Game_Date,
+        LAG(g.Game_Date, 1) OVER(PARTITION BY s.team_id ORDER BY g.Game_Date) AS prevGameDate,
+        s.Team_ID,
+        t.Team_Name,
+        ROW_NUMBER() OVER(PARTITION BY s.Team_ID ORDER BY g.Game_Date) AS team_game_number
+FROM stbl AS s
+        INNER JOIN Team_History AS t
+                ON s.Team_ID = t.Team_ID
+        INNER JOIN Games AS g
+                ON s.Game_ID = g.Game_ID)
+,
+daystbl
+AS
+(SELECT
+        w.Game_ID,
+        w.Game_Date,
+        w.prevGameDate,
+        DATEDIFF(DAY,w.prevGameDate,  w.Game_Date) AS DaysSinceLastGame,
+        w.Team_ID,
+        w.Team_Name,
+        w.team_game_number
+FROM wtbl AS w)
+
+SELECT
+        d.Game_ID,
+        d.Game_Date,
+        d.DaysSinceLastGame,
+        CASE
+                WHEN DaysSinceLastGame = 1
+                        THEN 1 --true
+                        ELSE 0 --false
+                END AS b2bcheck,
+        d.Team_ID,
+        d.Team_Name,
+        d.team_game_number
+FROM daystbl AS d;
+GO
+
+
