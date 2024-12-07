@@ -317,10 +317,8 @@ in which the team scored the same amount in subsequent games
 
 
 /*
-Back to Back Analysis
-A back to back in the NBA is when a team plays two games in subsequent days, which causes the team to not get any meaningful rest before the second game.
-What I am going to do is find and mark all B2B games, count to see how many each team plays in, and later use a view derived from the next query to check
-how the players perform in B2B games.
+Finding all Back to Back games
+A back to back in the NBA is when a team plays games on subsequent days
 */
 
 GO
@@ -415,10 +413,3 @@ I used SUM to count the total amount of B2B per team and for the entire league.
 Some of the previous CTE's could have been condensed but I  believe it would have been difficult to read them in that case.
 */
 
-/*
-Now I'll check player performance in B2B games.
-The view 'vw_b2b_games' is created in this script: '1 - First data dive in and view creation.sql'.
-It's the previous query up to the fourth CTE(b2btbl)
-/*
-
---TBD
