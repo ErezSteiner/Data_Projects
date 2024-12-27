@@ -413,3 +413,76 @@ I used SUM to count the total amount of B2B per team and for the entire league.
 Some of the previous CTE's could have been condensed but I  believe it would have been difficult to read them in that case.
 */
 
+
+--points per shot attempt
+/*
+Points per shot attempt is an efficiency metric used in the NBA to see how many points a player scores per
+shot attempt on average, ignoring free throws. 
+*/
+
+WITH
+aggtbl
+AS
+(SELECT
+        pts.Player_ID,
+        COUNT(*) AS attempts,
+        SUM(pts.points_scored) AS total_points
+FROM vw_points_scored AS pts
+GROUP BY pts.Player_ID)
+,
+ppatbl
+AS
+(SELECT
+        a.Player_ID,
+        a.attempts,
+        a.total_points,
+        AVG(a.attempts) OVER() AS avg_attempts,
+        FORMAT((CAST(a.total_points AS float) / a.attempts), '0.0000') AS points_per_attempt
+FROM aggtbl AS a)
+,
+dnrtbl
+AS
+(SELECT
+        p.Player_ID,
+        p.attempts,
+        p.total_points,
+        p.points_per_attempt,
+        DENSE_RANK() OVER(ORDER BY p.points_per_attempt DESC) AS DNR        
+FROM ppatbl AS p
+WHERE p.attempts > p.avg_attempts)
+SELECT
+        d.Player_ID,
+        p.Player_Name,
+        d.attempts,
+        d.total_points,
+        d.points_per_attempt
+FROM dnrtbl AS d
+        INNER JOIN Players AS p
+                ON p.Player_ID = d.Player_ID
+WHERE d.DNR < 11;
+
+/*
+Player_ID	Player_Name	attempts	total_points	points_per_attempt
+1629655	        Daniel Gafford	480	        696	        1.4500
+1630188	        Jalen Smith	395	        529	        1.3392
+1630167	        Obi Toppin	579	        766	        1.3230
+203497	        Rudy Gobert	614	        812	        1.3225
+1627826	        Ivica Zubac	519	        674	        1.2987
+1628960	        Grayson Allen	682	        885	        1.2977
+201143	        Al Horford	419	        536	        1.2792
+1629021	        Moritz Wagner	552	        702	        1.2717
+1628386	        Jarrett Allen	819	        1038	        1.2674
+1629651	        Nic Claxton	582	        733	        1.2595
+*/
+
+/*
+First CTE (aggtbl):
+In this CTE I used two aggregate functions to calculate the attempts per player and the total score of the player in the given season.
+Second CTE(ppatbl):
+In the second CTE I created an average of the league shot attempts to filter low volume but highly efficient players. I also calculated the actual points per shot attempt and formatted it neatly.
+Third CTE(dnrtbl):
+In the third CTE I created a dense rank to allow me to select whichever subset of players I would like to. In addition, I filtered all the players who have less attempts than the leagues average.
+Final Selection:
+I joined the players table in order to get the players name, selected all the relevant columns and filtered on the dense rank to only show the top 10 players by points per shot attempt.
+*/
+
