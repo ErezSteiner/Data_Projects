@@ -486,3 +486,83 @@ Final Selection:
 I joined the players table in order to get the players name, selected all the relevant columns and filtered on the dense rank to only show the top 10 players by points per shot attempt.
 */
 
+--attempts, score, per game per player per quarter and then a union for the entire game.
+
+WITH
+aggtbl
+AS
+(SELECT
+        s.Game_ID,
+        s.Player_ID,
+        s.[Quarter],
+        COUNT(*) AS attempts_per_quarter,
+        SUM(pnts.points_scored) AS pts_per_quarter
+
+FROM vw_points_scored AS pnts
+        INNER JOIN Shots AS s
+                ON pnts.Shot_ID = s.Shot_ID
+        INNER JOIN Games AS g
+                ON g.Game_ID = s.Game_ID
+GROUP BY s.Game_ID, s.Player_ID, s.[Quarter])
+,
+uniontbl
+AS
+(SELECT
+        a.Game_ID,
+        a.Player_ID,
+        a.[Quarter],
+        a.attempts_per_quarter,
+        a.pts_per_quarter
+FROM aggtbl AS a
+UNION ALL
+SELECT
+        Game_ID,
+        Player_ID,
+        5 AS [Quarter],
+        SUM(attempts_per_quarter) AS attempts_per_quarter,
+        SUM(pts_per_quarter) AS pts_per_quarter
+FROM aggtbl AS a
+GROUP BY Game_ID, Player_ID
+)
+SELECT
+        u.Game_ID,
+        p.Player_Name,
+        CASE WHEN
+                u.[Quarter] = 5
+                THEN 'Game Total'
+                ELSE CAST(u.[Quarter] AS VARCHAR)
+                END AS Quarter,
+        u.attempts_per_quarter,
+        u.pts_per_quarter
+FROM uniontbl AS u
+INNER JOIN Players AS p
+        ON u.Player_ID = p.Player_ID
+ORDER BY u.Game_ID, u.Player_ID, u.[Quarter];
+
+/*
+Game_ID	        Player_Name	Quarter	        attempts_per_quarter	pts_per_quarter
+22300001	Myles Turner	1	        3	                5
+22300001	Myles Turner	2	        5	                13
+22300001	Myles Turner	3	        3	                2
+22300001	Myles Turner	4	        3	                2
+22300001	Myles Turner	Game Total	14	                22
+22300001	Buddy Hield	1	        3	                8
+22300001	Buddy Hield	2	        2	                0
+22300001	Buddy Hield	3	        1	                0
+22300001	Buddy Hield	4	        3	                6
+22300001	Buddy Hield	Game Total	9	                14
+...
+/*
+
+/*
+First CTE (aggtbl):
+In the first CTE I selected the relevant columns from the joined tables and grouped the data by game, player and quarter. I then ran two aggregate functions, COUNT and SUM, to see the total attempts and points per quarter per player per game.
+Second CTE(uniontbl):
+I selected the data and used UNION to attach a game total sum line for each game per player, summing the number of attempts and points for each player in each game.
+Final Selection:
+I joined the players table to get the players name and used a case in order to change the name of the sum row from '5' to 'Game total'. I then ordered the data by game, player and quarter. 
+*/
+
+
+
+
